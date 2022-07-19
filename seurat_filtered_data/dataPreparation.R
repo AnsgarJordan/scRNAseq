@@ -6,25 +6,48 @@ library(patchwork)
 cnc.data <- Read10X(data.dir = "filtered_feature_bc_matrix")
 
 # Initialize the Seurat object with the raw (non-normalized data).
-cnc <- CreateSeuratObject(counts = cnc.data, project = "pbmc3k", min.cells = 3, min.features = 200)
-cnc
+cnc <- CreateSeuratObject(counts = cnc.data, project = "cnc3k", min.cells = 3, min.features = 200)
+# cnc
 cnc[["percent.mt"]] <- PercentageFeatureSet(cnc, pattern = "^MT-")
 
 # prune out the unnecessary cells (Quality Control (QC))
-# cnc <- subset(pbmc, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & percent.mt < 5)
+cnc <- subset(cnc, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & percent.mt < 5)
 
-cnc <- scaleData(cnc)
 
-cnc <- JackStraw(cnc, num.replicate = 100)
-cnc <- ScoreJackStraw(cnc, dims = 1:15)
+# Feature Selection
+cnc <- FindVariableFeatures(cnc, selection.method = "vst", nfeatures = 2000)
 
-# JackStrawPlot(cnc, dims = 1:15)
-ElbowPlot(cnc)
+# Identify the 10 most highly variable genes
+top10 <- head(VariableFeatures(cnc), 10)
 
-## use the same number of PC's as prescribed by the elbowplot
+# plot variable features with and without labels
+plot1 <- VariableFeaturePlot(cnc)
+plot2 <- LabelPoints(plot = plot1, points = top10, repel = TRUE)
+plot1 + plot2
 
-cnc <- FindNeighbors(cnc, dims = 1:12)
+# scaling - always do this before doing PCA
+
+cnc <- ScaleData(cnc)
+
+# PCA
+cnc <- RunPCA(cnc, features = VariableFeatures(object = cnc))
+
+# visualize PCA
+DimPlot(cnc, reduction = "pca")
+
+
+cnc <- FindNeighbors(cnc, dims = 1:10)
 cnc <- FindClusters(cnc, resolution = 0.5)
-
-cnc <- RunUMAP(cnc, dims = 1:12)
+# using UMAP
+cnc <- RunUMAP(cnc, dims = 1:10)
 DimPlot(cnc, reduction = "umap")
+
+
+
+
+## 
+umap = cbind("Barcode" = rownames(Embeddings(object = cnc, reduction = "umap")), Embeddings(object = cnc, reduction = "umap"))
+write.table(umap, file="umap_rna.csv", sep = ",", quote = F, row.names = F, col.names = T)
+
+
+

@@ -41,4 +41,4 @@ pbmc <- FindNeighbors(pbmc, dims = 1:10)
 pbmc <- FindClusters(pbmc, resolution = 0.5)
 # using UMAP
 pbmc <- RunUMAP(pbmc, dims = 1:10)
-DimPlot(pbmc, reduction = "umap")
+DimPlot(pbmc, reduction = "umap"====
